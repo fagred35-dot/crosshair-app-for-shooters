@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+#include "Compat.h"
 #include "CrosshairRenderer.h"
 #include "Resource.h"
 
@@ -234,7 +235,7 @@ LRESULT MainWindow::handleMessage(const UINT message, const WPARAM wParam, const
     case WM_MOUSEWHEEL:
         if (page_ == Page::Gallery) {
             const int steps = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
-            galleryScroll_ = std::clamp(galleryScroll_ - steps * 95, 0, galleryMaximumScroll_);
+            galleryScroll_ = clampValue(galleryScroll_ - steps * 95, 0, galleryMaximumScroll_);
             InvalidateRect(window_, nullptr, FALSE);
         }
         return 0;
@@ -376,7 +377,7 @@ void MainWindow::paintSidebar(HDC dc, const RECT& client) {
     drawNavigation(224, L"03", L"Автокликер", Page::Clicker);
     drawNavigation(282, L"04", L"Настройки", Page::Settings);
 
-    const int statusTop = std::max(380, client.bottom - 126);
+    const int statusTop = std::max(380, static_cast<int>(client.bottom) - 126);
     const RECT status{16, statusTop, 204, statusTop + 76};
     fillRound(dc, status, 12, kCard);
     fillRound(dc, {30, statusTop + 17, 40, statusTop + 27}, 10,
@@ -443,7 +444,7 @@ void MainWindow::paintGallery(HDC dc, const RECT& client) {
     const int rows = static_cast<int>((indices.size() + static_cast<std::size_t>(columns - 1)) /
                                       static_cast<std::size_t>(columns));
     galleryMaximumScroll_ = std::max(0, rows * rowStride - (gridBottom - gridTop));
-    galleryScroll_ = std::clamp(galleryScroll_, 0, galleryMaximumScroll_);
+    galleryScroll_ = clampValue(galleryScroll_, 0, galleryMaximumScroll_);
 
     const int saved = SaveDC(dc);
     IntersectClipRect(dc, left, gridTop, right + 1, gridBottom + 1);
@@ -475,8 +476,8 @@ void MainWindow::paintGallery(HDC dc, const RECT& client) {
             drawText(dc, L"✓", {card.right - 30, card.top + 9, card.right - 12, card.top + 29},
                      smallFont_, RGB(12, 54, 40), DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         }
-        const RECT clickable{card.left, std::max(card.top, gridTop),
-                             card.right, std::min(card.bottom, gridBottom)};
+        const RECT clickable{card.left, std::max(card.top, static_cast<LONG>(gridTop)),
+                             card.right, std::min(card.bottom, static_cast<LONG>(gridBottom))};
         addHit(clickable, Action::SelectPreset, presetIndex);
     }
     RestoreDC(dc, saved);
@@ -498,7 +499,7 @@ void MainWindow::paintCrosshair(HDC dc, const RECT& client) {
              {left, 68, right, 94}, bodyFont_, kMuted);
 
     const int contentTop = 116;
-    const int previewWidth = std::clamp((right - left) * 46 / 100, 325, 440);
+    const int previewWidth = clampValue((right - left) * 46 / 100, 325, 440);
     const RECT preview{left, contentTop, left + previewWidth, client.bottom - 30};
     fillRound(dc, preview, 16, kCard);
     strokeRound(dc, preview, 16, kBorder);
@@ -516,11 +517,11 @@ void MainWindow::paintCrosshair(HDC dc, const RECT& client) {
 
     const int buttonY = preview.bottom - 48;
     const int compactWidth = (previewWidth - 68) / 3;
-    drawButton(dc, {preview.left + 18, buttonY, preview.left + 18 + compactWidth, buttonY + 34},
+    drawButton(dc, RECT{preview.left + 18, buttonY, preview.left + 18 + compactWidth, buttonY + 34},
                L"←", Action::PreviousPreset);
-    drawButton(dc, {preview.left + 26 + compactWidth, buttonY, preview.left + 26 + compactWidth * 2, buttonY + 34},
+    drawButton(dc, RECT{preview.left + 26 + compactWidth, buttonY, preview.left + 26 + compactWidth * 2, buttonY + 34},
                L"Случайный", Action::RandomPreset, 0, true);
-    drawButton(dc, {preview.left + 34 + compactWidth * 2, buttonY, preview.right - 18, buttonY + 34},
+    drawButton(dc, RECT{preview.left + 34 + compactWidth * 2, buttonY, preview.right - 18, buttonY + 34},
                L"→", Action::NextPreset);
 
     const int controlsX = preview.right + 25;
@@ -669,7 +670,11 @@ void MainWindow::paintSettings(HDC dc, const RECT& client) {
 }
 
 void MainWindow::addHit(const RECT bounds, const Action action, const int value) {
-    hits_.push_back({bounds, action, value});
+    HitRegion region;
+    region.bounds = bounds;
+    region.action = action;
+    region.value = value;
+    hits_.push_back(region);
 }
 
 void MainWindow::drawButton(HDC dc,
@@ -800,7 +805,7 @@ void MainWindow::processAction(const Action action, const int value, const POINT
         InvalidateRect(window_, nullptr, FALSE);
         return;
     case Action::SelectPreset:
-        settings_.selectedPreset = std::clamp(value, 0, static_cast<int>(presets_.size()) - 1);
+        settings_.selectedPreset = clampValue(value, 0, static_cast<int>(presets_.size()) - 1);
         changed = true;
         break;
     case Action::SetFilter:
@@ -865,11 +870,11 @@ void MainWindow::processAction(const Action action, const int value, const POINT
         changed = true;
         break;
     case Action::SetBurst:
-        settings_.burstCount = std::clamp(value, 1, 3);
+        settings_.burstCount = clampValue(value, 1, 3);
         changed = true;
         break;
     case Action::SetHotkey:
-        settings_.clickerHotkey = std::clamp(value, static_cast<int>(VK_F6), static_cast<int>(VK_F9));
+        settings_.clickerHotkey = clampValue(value, static_cast<int>(VK_F6), static_cast<int>(VK_F9));
         clicker_.panicStop();
         changed = true;
         hotkeyChanged = true;
@@ -900,9 +905,9 @@ void MainWindow::processAction(const Action action, const int value, const POINT
 }
 
 void MainWindow::updateSlider(const Action action, const int mouseX) {
-    const int width = std::max(1, draggingBounds_.right - draggingBounds_.left - 10);
+    const int width = std::max(1, static_cast<int>(draggingBounds_.right - draggingBounds_.left) - 10);
     const int start = draggingBounds_.left + 5;
-    const float ratio = std::clamp(static_cast<float>(mouseX - start) / static_cast<float>(width), 0.0F, 1.0F);
+    const float ratio = clampValue(static_cast<float>(mouseX - start) / static_cast<float>(width), 0.0F, 1.0F);
     const auto interpolate = [ratio](const int minimum, const int maximum) {
         return minimum + static_cast<int>(std::lround(ratio * static_cast<float>(maximum - minimum)));
     };
@@ -936,7 +941,7 @@ void MainWindow::updateSlider(const Action action, const int mouseX) {
 }
 
 void MainWindow::applySettings(const bool hotkeyChanged) {
-    settings_.selectedPreset = std::clamp(settings_.selectedPreset, 0, static_cast<int>(presets_.size()) - 1);
+    settings_.selectedPreset = clampValue(settings_.selectedPreset, 0, static_cast<int>(presets_.size()) - 1);
     clicker_.configure(settings_);
     if (hotkeyChanged) {
         registerGlobalHotkeys();

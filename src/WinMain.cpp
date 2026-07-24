@@ -13,11 +13,28 @@
 #include <utility>
 
 int WINAPI wWinMain(const HINSTANCE instance, HINSTANCE, PWSTR, int) {
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    // Resolve the Windows 10 DPI API dynamically so the executable also starts on older systems.
+    using SetDpiContext = BOOL(WINAPI*)(HANDLE);
+    HMODULE user32 = GetModuleHandleW(L"user32.dll");
+    SetDpiContext setDpiContext = user32
+                                      ? reinterpret_cast<SetDpiContext>(
+                                            GetProcAddress(user32, "SetProcessDpiAwarenessContext"))
+                                      : nullptr;
+    if (setDpiContext) {
+        setDpiContext(reinterpret_cast<HANDLE>(static_cast<INT_PTR>(-4))); // PER_MONITOR_AWARE_V2
+    } else if (user32) {
+        using SetDpiAware = BOOL(WINAPI*)();
+        SetDpiAware setDpiAware = reinterpret_cast<SetDpiAware>(
+            GetProcAddress(user32, "SetProcessDPIAware"));
+        if (setDpiAware) {
+            setDpiAware();
+        }
+    }
 
     HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\AimPoint.SingleInstance.v1");
     if (singleInstance && GetLastError() == ERROR_ALREADY_EXISTS) {
-        if (HWND existing = FindWindowW(L"AimPointMainWindow", nullptr)) {
+        HWND existing = FindWindowW(L"AimPointMainWindow", nullptr);
+        if (existing) {
             ShowWindow(existing, SW_SHOW);
             ShowWindow(existing, SW_RESTORE);
             SetForegroundWindow(existing);
@@ -31,7 +48,8 @@ int WINAPI wWinMain(const HINSTANCE instance, HINSTANCE, PWSTR, int) {
 
     bool startMinimized = false;
     int argumentCount = 0;
-    if (wchar_t** arguments = CommandLineToArgvW(GetCommandLineW(), &argumentCount)) {
+    wchar_t** arguments = CommandLineToArgvW(GetCommandLineW(), &argumentCount);
+    if (arguments) {
         for (int index = 1; index < argumentCount; ++index) {
             if (std::wstring(arguments[index]) == L"--minimized") {
                 startMinimized = true;

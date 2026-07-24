@@ -1,5 +1,6 @@
 #include "OverlayWindow.h"
 
+#include "Compat.h"
 #include "CrosshairRenderer.h"
 
 #include <algorithm>
@@ -61,7 +62,7 @@ void OverlayWindow::update(const AppSettings& settings,
     hasPreset_ = true;
 
     reposition();
-    const BYTE alpha = static_cast<BYTE>(std::clamp(settings.opacityPercent, 20, 100) * 255 / 100);
+    const BYTE alpha = static_cast<BYTE>(clampValue(settings.opacityPercent, 20, 100) * 255 / 100);
     SetLayeredWindowAttributes(window_, kTransparencyKey, alpha, LWA_COLORKEY | LWA_ALPHA);
     setVisible(settings.overlayVisible);
     InvalidateRect(window_, nullptr, FALSE);

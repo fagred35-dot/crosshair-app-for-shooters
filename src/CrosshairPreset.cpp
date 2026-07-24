@@ -66,7 +66,9 @@ std::vector<CrosshairPreset> makePresetCatalog() {
     int id = 0;
     for (const auto& shape : kShapes) {
         for (const auto& palette : kPalettes) {
-            for (const auto& [animation, animationLabel] : kAnimations) {
+            for (const auto& animationDefinition : kAnimations) {
+                const Animation animation = animationDefinition.first;
+                const wchar_t* animationLabel = animationDefinition.second;
                 CrosshairPreset preset;
                 preset.id = id++;
                 preset.name = std::wstring(shape.name) + L" · " + palette.name + L" · " + animationLabel;

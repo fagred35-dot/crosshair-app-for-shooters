@@ -9,7 +9,7 @@
 
 namespace aimpoint {
 
-inline constexpr UINT WM_AIMPOINT_CLICKER_STATE = WM_APP + 20;
+constexpr UINT WM_AIMPOINT_CLICKER_STATE = WM_APP + 20;
 
 class ClickerEngine {
 public:

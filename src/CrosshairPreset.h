@@ -28,9 +28,12 @@ enum class Animation {
 };
 
 struct RgbColor {
-    std::uint8_t r{};
-    std::uint8_t g{};
-    std::uint8_t b{};
+    constexpr RgbColor(std::uint8_t red = 0, std::uint8_t green = 0, std::uint8_t blue = 0) noexcept
+        : r(red), g(green), b(blue) {}
+
+    std::uint8_t r;
+    std::uint8_t g;
+    std::uint8_t b;
 };
 
 struct CrosshairPreset {

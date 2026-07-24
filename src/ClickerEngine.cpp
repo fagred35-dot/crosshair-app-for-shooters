@@ -1,5 +1,7 @@
 #include "ClickerEngine.h"
 
+#include "Compat.h"
+
 #include <algorithm>
 #include <chrono>
 #include <random>
@@ -30,9 +32,9 @@ void ClickerEngine::stop() {
 
 void ClickerEngine::configure(const AppSettings& settings) {
     enabled_ = settings.clickerEnabled;
-    clicksPerSecond_ = std::clamp(settings.clicksPerSecond, 1, 30);
-    variationPercent_ = std::clamp(settings.intervalVariationPercent, 0, 35);
-    burstCount_ = std::clamp(settings.burstCount, 1, 3);
+    clicksPerSecond_ = clampValue(settings.clicksPerSecond, 1, 30);
+    variationPercent_ = clampValue(settings.intervalVariationPercent, 0, 35);
+    burstCount_ = clampValue(settings.burstCount, 1, 3);
     clickMode_ = static_cast<int>(settings.clickMode);
     clickButton_ = static_cast<int>(settings.clickButton);
     hotkey_ = settings.clickerHotkey;
@@ -55,7 +57,8 @@ void ClickerEngine::panicStop() {
 void ClickerEngine::setActive(const bool active) {
     const bool previous = active_.exchange(active);
     if (previous != active) {
-        if (const HWND target = notificationWindow_.load()) {
+        const HWND target = notificationWindow_.load();
+        if (target) {
             PostMessageW(target, WM_AIMPOINT_CLICKER_STATE, active ? 1 : 0, 0);
         }
     }

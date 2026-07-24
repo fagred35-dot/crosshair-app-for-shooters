@@ -1,10 +1,10 @@
 #include "SettingsStore.h"
 
+#include "Compat.h"
+
 #include <windows.h>
 #include <shlobj.h>
 
-#include <algorithm>
-#include <filesystem>
 #include <string>
 
 namespace aimpoint {
@@ -36,7 +36,7 @@ bool writeStartupValue(const bool enabled) {
     bool success = false;
     if (enabled) {
         std::wstring executable(32768, L'\0');
-        const DWORD length = GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
+        const DWORD length = GetModuleFileNameW(nullptr, &executable[0], static_cast<DWORD>(executable.size()));
         executable.resize(length);
         const std::wstring quoted = L"\"" + executable + L"\" --minimized";
         success = RegSetValueExW(key,
@@ -58,10 +58,9 @@ bool writeStartupValue(const bool enabled) {
 SettingsStore::SettingsStore() {
     wchar_t appData[MAX_PATH]{};
     if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, appData))) {
-        const std::filesystem::path folder = std::filesystem::path(appData) / L"AimPoint";
-        std::error_code error;
-        std::filesystem::create_directories(folder, error);
-        path_ = (folder / L"settings.ini").wstring();
+        const std::wstring folder = std::wstring(appData) + L"\\AimPoint";
+        CreateDirectoryW(folder.c_str(), nullptr);
+        path_ = folder + L"\\settings.ini";
     } else {
         path_ = L"AimPoint.ini";
     }
@@ -69,24 +68,24 @@ SettingsStore::SettingsStore() {
 
 AppSettings SettingsStore::load() const {
     AppSettings value;
-    value.selectedPreset = std::clamp(readInt(path_, L"Crosshair", L"Preset", value.selectedPreset), 0, 359);
+    value.selectedPreset = clampValue(readInt(path_, L"Crosshair", L"Preset", value.selectedPreset), 0, 359);
     value.overlayVisible = readInt(path_, L"Crosshair", L"Visible", value.overlayVisible) != 0;
-    value.sizePercent = std::clamp(readInt(path_, L"Crosshair", L"Size", value.sizePercent), 50, 180);
-    value.opacityPercent = std::clamp(readInt(path_, L"Crosshair", L"Opacity", value.opacityPercent), 20, 100);
-    value.offsetX = std::clamp(readInt(path_, L"Crosshair", L"OffsetX", value.offsetX), -100, 100);
-    value.offsetY = std::clamp(readInt(path_, L"Crosshair", L"OffsetY", value.offsetY), -100, 100);
+    value.sizePercent = clampValue(readInt(path_, L"Crosshair", L"Size", value.sizePercent), 50, 180);
+    value.opacityPercent = clampValue(readInt(path_, L"Crosshair", L"Opacity", value.opacityPercent), 20, 100);
+    value.offsetX = clampValue(readInt(path_, L"Crosshair", L"OffsetX", value.offsetX), -100, 100);
+    value.offsetY = clampValue(readInt(path_, L"Crosshair", L"OffsetY", value.offsetY), -100, 100);
     value.forceOutline = readInt(path_, L"Crosshair", L"Outline", value.forceOutline) != 0;
     value.forceCenterDot = readInt(path_, L"Crosshair", L"CenterDot", value.forceCenterDot) != 0;
     value.followActiveMonitor = readInt(path_, L"Crosshair", L"ActiveMonitor", value.followActiveMonitor) != 0;
 
     value.clickerEnabled = readInt(path_, L"Clicker", L"Enabled", value.clickerEnabled) != 0;
-    value.clicksPerSecond = std::clamp(readInt(path_, L"Clicker", L"CPS", value.clicksPerSecond), 1, 30);
-    value.intervalVariationPercent = std::clamp(readInt(path_, L"Clicker", L"Variation", value.intervalVariationPercent), 0, 35);
-    value.burstCount = std::clamp(readInt(path_, L"Clicker", L"Burst", value.burstCount), 1, 3);
+    value.clicksPerSecond = clampValue(readInt(path_, L"Clicker", L"CPS", value.clicksPerSecond), 1, 30);
+    value.intervalVariationPercent = clampValue(readInt(path_, L"Clicker", L"Variation", value.intervalVariationPercent), 0, 35);
+    value.burstCount = clampValue(readInt(path_, L"Clicker", L"Burst", value.burstCount), 1, 3);
     value.clickMode = readInt(path_, L"Clicker", L"Mode", 0) == 1 ? ClickMode::Hold : ClickMode::Toggle;
     value.clickButton = readInt(path_, L"Clicker", L"Button", 0) == 1 ? ClickButton::Right : ClickButton::Left;
     const int hotkey = readInt(path_, L"Clicker", L"Hotkey", value.clickerHotkey);
-    value.clickerHotkey = std::clamp(hotkey, static_cast<int>(VK_F6), static_cast<int>(VK_F9));
+    value.clickerHotkey = clampValue(hotkey, static_cast<int>(VK_F6), static_cast<int>(VK_F9));
 
     value.minimizeToTray = readInt(path_, L"Application", L"MinimizeToTray", value.minimizeToTray) != 0;
     value.runAtStartup = readInt(path_, L"Application", L"RunAtStartup", value.runAtStartup) != 0;
