@@ -1,6 +1,7 @@
 #include "SettingsStore.h"
 
 #include "Compat.h"
+#include "CrosshairPreset.h"
 
 #include <windows.h>
 #include <shlobj.h>
@@ -68,7 +69,7 @@ SettingsStore::SettingsStore() {
 
 AppSettings SettingsStore::load() const {
     AppSettings value;
-    value.selectedPreset = clampValue(readInt(path_, L"Crosshair", L"Preset", value.selectedPreset), 0, 359);
+    value.selectedPreset = clampValue(readInt(path_, L"Crosshair", L"Preset", value.selectedPreset), 0, kPresetCount - 1);
     value.overlayVisible = readInt(path_, L"Crosshair", L"Visible", value.overlayVisible) != 0;
     value.sizePercent = clampValue(readInt(path_, L"Crosshair", L"Size", value.sizePercent), 50, 180);
     value.opacityPercent = clampValue(readInt(path_, L"Crosshair", L"Opacity", value.opacityPercent), 20, 100);
@@ -79,13 +80,18 @@ AppSettings SettingsStore::load() const {
     value.followActiveMonitor = readInt(path_, L"Crosshair", L"ActiveMonitor", value.followActiveMonitor) != 0;
 
     value.clickerEnabled = readInt(path_, L"Clicker", L"Enabled", value.clickerEnabled) != 0;
-    value.clicksPerSecond = clampValue(readInt(path_, L"Clicker", L"CPS", value.clicksPerSecond), 1, 30);
-    value.intervalVariationPercent = clampValue(readInt(path_, L"Clicker", L"Variation", value.intervalVariationPercent), 0, 35);
+    value.clicksPerSecond = clampValue(readInt(path_, L"Clicker", L"CPS", value.clicksPerSecond), 1, 50);
+    value.intervalVariationPercent = clampValue(readInt(path_, L"Clicker", L"Variation", value.intervalVariationPercent), 0, 40);
+    value.pressDurationMs = clampValue(readInt(path_, L"Clicker", L"PressDuration", value.pressDurationMs), 4, 45);
+    value.startDelayMs = clampValue(readInt(path_, L"Clicker", L"StartDelay", value.startDelayMs), 0, 3000);
+    const int savedLimit = readInt(path_, L"Clicker", L"ClickLimit", value.clickLimit);
+    value.clickLimit = savedLimit == 100 || savedLimit == 500 || savedLimit == 1000 ? savedLimit : 0;
     value.burstCount = clampValue(readInt(path_, L"Clicker", L"Burst", value.burstCount), 1, 3);
     value.clickMode = readInt(path_, L"Clicker", L"Mode", 0) == 1 ? ClickMode::Hold : ClickMode::Toggle;
     value.clickButton = readInt(path_, L"Clicker", L"Button", 0) == 1 ? ClickButton::Right : ClickButton::Left;
     const int hotkey = readInt(path_, L"Clicker", L"Hotkey", value.clickerHotkey);
     value.clickerHotkey = clampValue(hotkey, static_cast<int>(VK_F6), static_cast<int>(VK_F9));
+    value.pauseWhileAppFocused = readInt(path_, L"Clicker", L"FocusGuard", value.pauseWhileAppFocused) != 0;
 
     value.minimizeToTray = readInt(path_, L"Application", L"MinimizeToTray", value.minimizeToTray) != 0;
     value.runAtStartup = readInt(path_, L"Application", L"RunAtStartup", value.runAtStartup) != 0;
@@ -106,10 +112,14 @@ void SettingsStore::save(const AppSettings& value) const {
     writeInt(path_, L"Clicker", L"Enabled", value.clickerEnabled);
     writeInt(path_, L"Clicker", L"CPS", value.clicksPerSecond);
     writeInt(path_, L"Clicker", L"Variation", value.intervalVariationPercent);
+    writeInt(path_, L"Clicker", L"PressDuration", value.pressDurationMs);
+    writeInt(path_, L"Clicker", L"StartDelay", value.startDelayMs);
+    writeInt(path_, L"Clicker", L"ClickLimit", value.clickLimit);
     writeInt(path_, L"Clicker", L"Burst", value.burstCount);
     writeInt(path_, L"Clicker", L"Mode", static_cast<int>(value.clickMode));
     writeInt(path_, L"Clicker", L"Button", static_cast<int>(value.clickButton));
     writeInt(path_, L"Clicker", L"Hotkey", value.clickerHotkey);
+    writeInt(path_, L"Clicker", L"FocusGuard", value.pauseWhileAppFocused);
 
     writeInt(path_, L"Application", L"MinimizeToTray", value.minimizeToTray);
     writeInt(path_, L"Application", L"RunAtStartup", value.runAtStartup);

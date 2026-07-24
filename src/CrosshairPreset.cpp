@@ -23,7 +23,7 @@ struct PaletteDefinition {
     RgbColor accent;
 };
 
-constexpr std::array<ShapeDefinition, 12> kShapes{{
+constexpr std::array<ShapeDefinition, 30> kShapes{{
     {CrosshairShape::Classic, L"Классика", L"Тактические", 18.0F, 5.0F, 2.0F, true, false},
     {CrosshairShape::Dot, L"Точка", L"Минимализм", 5.0F, 0.0F, 3.0F, true, true},
     {CrosshairShape::Circle, L"Кольцо", L"Минимализм", 14.0F, 3.0F, 2.0F, true, true},
@@ -36,6 +36,24 @@ constexpr std::array<ShapeDefinition, 12> kShapes{{
     {CrosshairShape::Wings, L"Крылья", L"Динамические", 22.0F, 6.0F, 2.5F, true, true},
     {CrosshairShape::Triad, L"Триада", L"Динамические", 18.0F, 5.0F, 2.0F, true, true},
     {CrosshairShape::Hexagon, L"Гексагон", L"Динамические", 16.0F, 2.0F, 2.0F, true, false},
+    {CrosshairShape::Butterfly, L"Бабочка", L"Арт-прицелы", 20.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Saturn, L"Сатурн", L"Арт-прицелы", 19.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Bee, L"Пчела", L"Арт-прицелы", 19.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Crown, L"Корона", L"Арт-прицелы", 19.0F, 2.0F, 2.0F, true, true},
+    {CrosshairShape::Heart, L"Сердце", L"Арт-прицелы", 18.0F, 2.0F, 2.0F, true, true},
+    {CrosshairShape::Star, L"Звезда", L"Арт-прицелы", 18.0F, 2.0F, 2.0F, true, true},
+    {CrosshairShape::Lightning, L"Молния", L"Арт-прицелы", 19.0F, 2.0F, 2.2F, true, true},
+    {CrosshairShape::Rocket, L"Ракета", L"Арт-прицелы", 20.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Alien, L"Пришелец", L"Арт-прицелы", 18.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Cat, L"Кот", L"Арт-прицелы", 19.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Spider, L"Паук", L"Арт-прицелы", 20.0F, 2.0F, 1.7F, true, true},
+    {CrosshairShape::Flower, L"Цветок", L"Арт-прицелы", 19.0F, 2.0F, 1.7F, true, true},
+    {CrosshairShape::Dragonfly, L"Стрекоза", L"Арт-прицелы", 20.0F, 2.0F, 1.7F, true, true},
+    {CrosshairShape::Ghost, L"Призрак", L"Арт-прицелы", 18.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Skull, L"Череп", L"Арт-прицелы", 18.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Sword, L"Меч", L"Арт-прицелы", 20.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Moon, L"Луна", L"Арт-прицелы", 18.0F, 2.0F, 1.8F, true, true},
+    {CrosshairShape::Flame, L"Пламя", L"Арт-прицелы", 19.0F, 2.0F, 1.8F, true, true},
 }};
 
 constexpr std::array<PaletteDefinition, 10> kPalettes{{

@@ -200,7 +200,7 @@ LRESULT MainWindow::handleMessage(const UINT message, const WPARAM wParam, const
         return 1;
     case WM_GETMINMAXINFO: {
         auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
-        info->ptMinTrackSize = {980, 650};
+        info->ptMinTrackSize = {1000, 720};
         return 0;
     }
     case WM_LBUTTONDOWN: {
@@ -209,7 +209,8 @@ LRESULT MainWindow::handleMessage(const UINT message, const WPARAM wParam, const
             if (pointInside(iterator->bounds, point)) {
                 if (iterator->action == Action::SizeSlider || iterator->action == Action::OpacitySlider ||
                     iterator->action == Action::OffsetXSlider || iterator->action == Action::OffsetYSlider ||
-                    iterator->action == Action::CpsSlider || iterator->action == Action::VariationSlider) {
+                    iterator->action == Action::CpsSlider || iterator->action == Action::VariationSlider ||
+                    iterator->action == Action::PressDurationSlider) {
                     dragging_ = iterator->action;
                     draggingBounds_ = iterator->bounds;
                     SetCapture(window_);
@@ -386,37 +387,39 @@ void MainWindow::paintSidebar(HDC dc, const RECT& client) {
              {50, statusTop + 8, 194, statusTop + 38}, bodyFont_, kText);
     drawText(dc, L"Ctrl + Shift + O", {30, statusTop + 39, 194, statusTop + 65}, smallFont_, kMuted);
     addHit(status, Action::ToggleOverlay);
-    drawText(dc, L"AimPoint 1.0  •  360 пресетов", {22, client.bottom - 37, 204, client.bottom - 12},
+    drawText(dc, L"AimPoint 1.1  •  900 пресетов", {22, client.bottom - 37, 204, client.bottom - 12},
              smallFont_, kMuted);
 }
 
 void MainWindow::paintTopStatus(HDC dc, const RECT& client) {
     const bool clickerActive = clicker_.isActive();
+    const bool clickerPaused = clicker_.isPaused();
     const int right = client.right - 30;
-    const RECT clickerPill{right - 142, 27, right, 59};
-    fillRound(dc, clickerPill, 16, clickerActive ? RGB(32, 88, 68) : kCard);
+    const RECT clickerPill{right - 152, 27, right, 59};
+    fillRound(dc, clickerPill, 16,
+              clickerPaused ? RGB(73, 57, 31) : (clickerActive ? RGB(32, 88, 68) : kCard));
     fillRound(dc, {clickerPill.left + 13, 38, clickerPill.left + 21, 46}, 8,
-              clickerActive ? kAccent : kMuted);
-    drawText(dc, clickerActive ? L"Кликер активен" : L"Кликер неактивен",
+              clickerPaused ? kWarning : (clickerActive ? kAccent : kMuted));
+    drawText(dc, clickerPaused ? L"Кликер на паузе" : (clickerActive ? L"Кликер активен" : L"Кликер неактивен"),
              {clickerPill.left + 28, 27, clickerPill.right - 10, 59}, smallFont_,
-             clickerActive ? kAccent : kMuted);
+             clickerPaused ? kWarning : (clickerActive ? kAccent : kMuted));
 }
 
 void MainWindow::paintGallery(HDC dc, const RECT& client) {
     const int left = kSidebarWidth + 34;
     const int right = client.right - 28;
     drawText(dc, L"Галерея прицелов", {left, 28, right - 170, 66}, titleFont_, kText);
-    drawText(dc, L"360 процедурных пресетов: статичные, пульсирующие и вращающиеся",
+    drawText(dc, L"900 вариантов — от точных сеток до бабочек, планет, пчёл и арт-символов",
              {left, 68, right, 94}, bodyFont_, kMuted);
 
     struct FilterItem { Filter filter; const wchar_t* label; int width; };
     constexpr std::array<FilterItem, 6> filters{{
-        {Filter::All, L"Все  360", 86},
-        {Filter::Static, L"Статика", 86},
-        {Filter::Animated, L"Анимация", 96},
-        {Filter::Minimal, L"Минимализм", 112},
-        {Filter::Tactical, L"Тактика", 86},
-        {Filter::Dynamic, L"Динамика", 98},
+        {Filter::All, L"Все  900", 84},
+        {Filter::Artistic, L"Арт-формы", 104},
+        {Filter::Static, L"Статика", 82},
+        {Filter::Animated, L"Анимация", 94},
+        {Filter::Minimal, L"Минимализм", 108},
+        {Filter::Tactical, L"Тактика", 82},
     }};
     int filterX = left;
     for (const auto& item : filters) {
@@ -438,7 +441,7 @@ void MainWindow::paintGallery(HDC dc, const RECT& client) {
     const int columns = availableWidth >= 760 ? 4 : 3;
     const int gap = 13;
     const int cardWidth = (availableWidth - gap * (columns - 1)) / columns;
-    const int cardHeight = 142;
+    const int cardHeight = 156;
     const int rowStride = cardHeight + gap;
     const auto indices = filteredPresets();
     const int rows = static_cast<int>((indices.size() + static_cast<std::size_t>(columns - 1)) /
@@ -462,15 +465,38 @@ void MainWindow::paintGallery(HDC dc, const RECT& client) {
         const bool selected = settings_.selectedPreset == presetIndex;
         fillRound(dc, card, 13, selected ? RGB(27, 47, 43) : kCard);
         strokeRound(dc, card, 13, selected ? kAccent : kBorder, selected ? 2 : 1);
+
+        const RECT previewArea{x + 8, y + 8, x + cardWidth - 8, y + 81};
+        fillRound(dc, previewArea, 10, RGB(15, 19, 27));
+        const HPEN guidePen = CreatePen(PS_DOT, 1, RGB(38, 45, 58));
+        const HGDIOBJ oldGuidePen = SelectObject(dc, guidePen);
+        MoveToEx(dc, previewArea.left + 10, y + 46, nullptr);
+        LineTo(dc, previewArea.right - 10, y + 46);
+        MoveToEx(dc, x + cardWidth / 2, previewArea.top + 8, nullptr);
+        LineTo(dc, x + cardWidth / 2, previewArea.bottom - 8);
+        SelectObject(dc, oldGuidePen);
+        DeleteObject(guidePen);
         drawCrosshairPreview(dc, {x + cardWidth / 2, y + 46}, presetIndex, 0.62F);
 
-        RECT nameRect{x + 13, y + 78, x + cardWidth - 13, y + 101};
+        const HBRUSH colorChip = CreateSolidBrush(RGB(preset.primary.r, preset.primary.g, preset.primary.b));
+        const RECT chip{x + 13, y + 91, x + 19, y + 105};
+        FillRect(dc, &chip, colorChip);
+        DeleteObject(colorChip);
+        RECT nameRect{x + 25, y + 84, x + cardWidth - 13, y + 108};
         drawText(dc, preset.name, nameRect, smallFont_, kText, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        drawText(dc, preset.family, {x + 13, y + 108, x + cardWidth - 13, y + 128},
+                 smallFont_, kMuted, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         const bool animated = preset.animation != Animation::None;
-        const RECT badge{x + 12, y + 109, x + (animated ? 86 : 74), y + 131};
+        const RECT badge{x + 12, y + 130, x + (animated ? 86 : 74), y + 150};
         fillRound(dc, badge, 8, animated ? RGB(55, 43, 83) : RGB(34, 42, 54));
         drawText(dc, animated ? L"АНИМАЦИЯ" : L"СТАТИКА", badge, smallFont_,
                  animated ? RGB(193, 159, 255) : kMuted, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        if (preset.family == L"Арт-прицелы") {
+            const RECT artBadge{card.right - 56, y + 130, card.right - 12, y + 150};
+            fillRound(dc, artBadge, 8, RGB(35, 68, 63));
+            drawText(dc, L"АРТ", artBadge, smallFont_, kAccent,
+                     DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        }
         if (selected) {
             fillRound(dc, {card.right - 30, card.top + 11, card.right - 12, card.top + 29}, 9, kAccent);
             drawText(dc, L"✓", {card.right - 30, card.top + 9, card.right - 12, card.top + 29},
@@ -542,28 +568,45 @@ void MainWindow::paintCrosshair(HDC dc, const RECT& client) {
 void MainWindow::paintClicker(HDC dc, const RECT& client) {
     const int left = kSidebarWidth + 34;
     const int right = client.right - 28;
-    drawText(dc, L"Автокликер", {left, 28, right - 170, 66}, titleFont_, kText);
-    drawText(dc, L"Системные клики через Windows SendInput — без доступа к памяти игр",
+    drawText(dc, L"Умный автокликер", {left, 28, right - 170, 66}, titleFont_, kText);
+    drawText(dc, L"Точный ритм, естественная вариативность, серии и защитные ограничения",
              {left, 68, right, 94}, bodyFont_, kMuted);
 
+    const bool active = clicker_.isActive();
+    const bool paused = clicker_.isPaused();
+    const COLORREF stateColor = paused ? kWarning : (active ? kAccent : kMuted);
     const RECT status{left, 112, right, 202};
-    fillRound(dc, status, 16, clicker_.isActive() ? RGB(23, 65, 51) : kCard);
-    strokeRound(dc, status, 16, clicker_.isActive() ? kAccentDark : kBorder);
+    fillRound(dc, status, 16, paused ? RGB(62, 49, 28) : (active ? RGB(23, 65, 51) : kCard));
+    strokeRound(dc, status, 16, paused ? RGB(125, 93, 42) : (active ? kAccentDark : kBorder));
     fillRound(dc, {status.left + 22, status.top + 25, status.left + 62, status.top + 65}, 20,
-              clicker_.isActive() ? kAccent : RGB(55, 63, 78));
-    drawText(dc, clicker_.isActive() ? L"●" : L"○", {status.left + 22, status.top + 23, status.left + 62, status.top + 63},
-             headingFont_, clicker_.isActive() ? RGB(12, 55, 41) : kMuted,
+              paused ? kWarning : (active ? kAccent : RGB(55, 63, 78)));
+    drawText(dc, paused ? L"Ⅱ" : (active ? L"●" : L"○"),
+             {status.left + 22, status.top + 23, status.left + 62, status.top + 63},
+             headingFont_, paused || active ? RGB(12, 55, 41) : kMuted,
              DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    drawText(dc, clicker_.isActive() ? L"Автокликер работает" : L"Автокликер готов",
-             {status.left + 78, status.top + 14, status.right - 190, status.top + 48}, headingFont_, kText);
-    const std::wstring activationHint = clicker_.isActive()
-                                            ? L"Esc — аварийная остановка"
-                                            : (clickerHotkeyRegistered_
-                                                   ? L"Запуск: " + hotkeyName(settings_.clickerHotkey)
-                                                   : L"Горячая клавиша занята другой программой");
+    drawText(dc, paused ? L"Пауза защиты" : (active ? L"Автокликер работает" : L"Автокликер готов"),
+             {status.left + 78, status.top + 10, status.right - 350, status.top + 40}, headingFont_, kText);
+
+    const std::wstring activationHint = paused
+                                            ? L"Переключитесь из AimPoint в игру"
+                                            : (active
+                                                   ? L"Esc — мгновенная остановка"
+                                                   : (clickerHotkeyRegistered_
+                                                          ? L"Запуск: " + hotkeyName(settings_.clickerHotkey)
+                                                          : L"Выбранная клавиша занята"));
     drawText(dc, activationHint,
-             {status.left + 78, status.top + 48, status.right - 190, status.top + 75}, bodyFont_,
-             clickerHotkeyRegistered_ ? kMuted : kDanger);
+             {status.left + 78, status.top + 38, status.right - 350, status.top + 62},
+             smallFont_, paused ? kWarning : (clickerHotkeyRegistered_ ? kMuted : kDanger));
+    drawText(dc, L"Сеанс: " + std::to_wstring(clicker_.sessionClicks()) +
+                     L"   •   Всего: " + std::to_wstring(clicker_.totalClicks()),
+             {status.left + 78, status.top + 62, status.right - 350, status.top + 84},
+             smallFont_, stateColor);
+
+    const RECT counter{status.right - 330, status.top + 26, status.right - 174, status.top + 64};
+    fillRound(dc, counter, 12, RGB(34, 40, 52));
+    drawText(dc, L"СБРОСИТЬ СЧЁТЧИК", counter, smallFont_, kMuted,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    addHit(counter, Action::ResetClickCounter);
 
     const RECT master{status.right - 158, status.top + 26, status.right - 22, status.top + 64};
     fillRound(dc, master, 19, settings_.clickerEnabled ? kAccent : RGB(53, 61, 75));
@@ -580,42 +623,56 @@ void MainWindow::paintClicker(HDC dc, const RECT& client) {
     strokeRound(dc, timing, 16, kBorder);
     strokeRound(dc, behavior, 16, kBorder);
 
-    drawText(dc, L"Скорость и ритм", {timing.left + 22, timing.top + 15, timing.right - 22, timing.top + 48},
+    drawText(dc, L"Тайминг", {timing.left + 22, timing.top + 15, timing.right - 22, timing.top + 46},
              headingFont_, kText);
-    drawSlider(dc, timing.left + 22, timing.top + 57, panelWidth - 44, L"Кликов в секунду",
-               settings_.clicksPerSecond, 1, 30, L" CPS", Action::CpsSlider);
-    drawSlider(dc, timing.left + 22, timing.top + 137, panelWidth - 44, L"Разброс интервала",
-               settings_.intervalVariationPercent, 0, 35, L"%", Action::VariationSlider);
-    drawText(dc, L"Режим активации", {timing.left + 22, timing.top + 226, timing.right - 22, timing.top + 250},
+    drawSlider(dc, timing.left + 22, timing.top + 52, panelWidth - 44, L"Кликов в секунду",
+               settings_.clicksPerSecond, 1, 50, L" CPS", Action::CpsSlider);
+    drawSlider(dc, timing.left + 22, timing.top + 124, panelWidth - 44, L"Естественный разброс",
+               settings_.intervalVariationPercent, 0, 40, L"%", Action::VariationSlider);
+    drawSlider(dc, timing.left + 22, timing.top + 196, panelWidth - 44, L"Длительность нажатия",
+               settings_.pressDurationMs, 4, 45, L" мс", Action::PressDurationSlider);
+
+    drawText(dc, L"Режим запуска", {timing.left + 22, timing.top + 275, timing.right - 22, timing.top + 299},
              bodyFont_, kMuted);
-    drawSegment(dc, {timing.left + 22, timing.top + 258, timing.right - 22, timing.top + 298},
+    drawSegment(dc, {timing.left + 22, timing.top + 303, timing.right - 22, timing.top + 341},
                 {L"Переключатель", L"Удержание"}, static_cast<int>(settings_.clickMode), Action::SetClickMode);
-    drawText(dc, L"Кнопка мыши", {timing.left + 22, timing.top + 316, timing.right - 22, timing.top + 340},
+    drawText(dc, L"Кнопка мыши", {timing.left + 22, timing.top + 354, timing.right - 22, timing.top + 378},
              bodyFont_, kMuted);
-    drawSegment(dc, {timing.left + 22, timing.top + 348, timing.right - 22, timing.top + 388},
+    drawSegment(dc, {timing.left + 22, timing.top + 382, timing.right - 22, timing.top + 420},
                 {L"Левая", L"Правая"}, static_cast<int>(settings_.clickButton), Action::SetClickButton);
 
-    drawText(dc, L"Поведение", {behavior.left + 22, behavior.top + 15, behavior.right - 22, behavior.top + 48},
+    drawText(dc, L"Сценарий", {behavior.left + 22, behavior.top + 15, behavior.right - 22, behavior.top + 46},
              headingFont_, kText);
-    drawText(dc, L"Кликов в серии", {behavior.left + 22, behavior.top + 64, behavior.right - 22, behavior.top + 88},
-             bodyFont_, kMuted);
-    drawSegment(dc, {behavior.left + 22, behavior.top + 96, behavior.right - 22, behavior.top + 136},
+    drawText(dc, L"Кликов в серии — общий CPS сохраняется",
+             {behavior.left + 22, behavior.top + 52, behavior.right - 22, behavior.top + 76}, bodyFont_, kMuted);
+    drawSegment(dc, {behavior.left + 22, behavior.top + 80, behavior.right - 22, behavior.top + 118},
                 {L"1", L"2", L"3"}, settings_.burstCount - 1, Action::SetBurst, {1, 2, 3});
-    drawText(dc, L"Горячая клавиша", {behavior.left + 22, behavior.top + 158, behavior.right - 22, behavior.top + 182},
+
+    drawText(dc, L"Горячая клавиша", {behavior.left + 22, behavior.top + 128, behavior.right - 22, behavior.top + 152},
              bodyFont_, kMuted);
-    drawSegment(dc, {behavior.left + 22, behavior.top + 190, behavior.right - 22, behavior.top + 230},
+    drawSegment(dc, {behavior.left + 22, behavior.top + 156, behavior.right - 22, behavior.top + 194},
                 {L"F6", L"F7", L"F8", L"F9"}, settings_.clickerHotkey - VK_F6,
                 Action::SetHotkey, {VK_F6, VK_F7, VK_F8, VK_F9});
 
-    const RECT safety{behavior.left + 22, behavior.top + 255, behavior.right - 22, behavior.bottom - 20};
-    fillRound(dc, safety, 12, RGB(38, 35, 29));
-    drawText(dc, L"БЕЗОПАСНОСТЬ", {safety.left + 15, safety.top + 10, safety.right - 15, safety.top + 32},
-             smallFont_, kWarning);
-    RECT safetyText{safety.left + 15, safety.top + 34, safety.right - 15, safety.bottom - 10};
-    drawText(dc, L"Нажмите Esc для мгновенной остановки. Проверьте правила игры: некоторые проекты запрещают автокликеры.",
-             safetyText, smallFont_, kMuted, DT_LEFT | DT_TOP | DT_WORDBREAK);
-}
+    const int delayIndex = settings_.startDelayMs == 3000 ? 2 : (settings_.startDelayMs == 1000 ? 1 : 0);
+    drawText(dc, L"Задержка перед стартом", {behavior.left + 22, behavior.top + 204, behavior.right - 22, behavior.top + 228},
+             bodyFont_, kMuted);
+    drawSegment(dc, {behavior.left + 22, behavior.top + 232, behavior.right - 22, behavior.top + 270},
+                {L"Нет", L"1 сек", L"3 сек"}, delayIndex, Action::SetStartDelay, {0, 1000, 3000});
 
+    int limitIndex = 0;
+    if (settings_.clickLimit == 100) limitIndex = 1;
+    else if (settings_.clickLimit == 500) limitIndex = 2;
+    else if (settings_.clickLimit == 1000) limitIndex = 3;
+    drawText(dc, L"Автостоп после кликов", {behavior.left + 22, behavior.top + 280, behavior.right - 22, behavior.top + 304},
+             bodyFont_, kMuted);
+    drawSegment(dc, {behavior.left + 22, behavior.top + 308, behavior.right - 22, behavior.top + 346},
+                {L"∞", L"100", L"500", L"1000"}, limitIndex, Action::SetClickLimit, {0, 100, 500, 1000});
+
+    drawSwitch(dc, behavior.left + 22, behavior.top + 360, L"Защита интерфейса",
+               L"Пауза, пока открыто окно AimPoint", settings_.pauseWhileAppFocused,
+               Action::ToggleFocusGuard);
+}
 void MainWindow::paintSettings(HDC dc, const RECT& client) {
     const int left = kSidebarWidth + 34;
     const int right = client.right - 28;
@@ -659,7 +716,7 @@ void MainWindow::paintSettings(HDC dc, const RECT& client) {
 
     const RECT about{appPanel.left + 22, appPanel.top + 218, appPanel.right - 22, appPanel.top + 348};
     fillRound(dc, about, 12, RGB(20, 24, 33));
-    drawText(dc, L"AimPoint 1.0", {about.left + 16, about.top + 12, about.right - 16, about.top + 42},
+    drawText(dc, L"AimPoint 1.1", {about.left + 16, about.top + 12, about.right - 16, about.top + 42},
              headingFont_, kText);
     RECT aboutBody{about.left + 16, about.top + 48, about.right - 16, about.bottom - 12};
     drawText(dc, L"Нативное C++/Win32-приложение. Оверлей не внедряется в процессы и не читает память игр.",
@@ -780,6 +837,8 @@ bool MainWindow::filterMatches(const CrosshairPreset& preset) const {
     switch (filter_) {
     case Filter::All:
         return true;
+    case Filter::Artistic:
+        return preset.family == L"Арт-прицелы";
     case Filter::Static:
         return preset.animation == Animation::None;
     case Filter::Animated:
@@ -788,8 +847,6 @@ bool MainWindow::filterMatches(const CrosshairPreset& preset) const {
         return isMinimalShape(preset.shape);
     case Filter::Tactical:
         return preset.family == L"Тактические";
-    case Filter::Dynamic:
-        return preset.family == L"Динамические";
     }
     return true;
 }
@@ -819,6 +876,7 @@ void MainWindow::processAction(const Action action, const int value, const POINT
     case Action::OffsetYSlider:
     case Action::CpsSlider:
     case Action::VariationSlider:
+    case Action::PressDurationSlider:
         updateSlider(action, point.x);
         return;
     case Action::ToggleOverlay:
@@ -879,6 +937,22 @@ void MainWindow::processAction(const Action action, const int value, const POINT
         changed = true;
         hotkeyChanged = true;
         break;
+    case Action::SetStartDelay:
+        settings_.startDelayMs = value == 3000 ? 3000 : (value == 1000 ? 1000 : 0);
+        changed = true;
+        break;
+    case Action::SetClickLimit:
+        settings_.clickLimit = value == 100 || value == 500 || value == 1000 ? value : 0;
+        changed = true;
+        break;
+    case Action::ToggleFocusGuard:
+        settings_.pauseWhileAppFocused = !settings_.pauseWhileAppFocused;
+        changed = true;
+        break;
+    case Action::ResetClickCounter:
+        clicker_.resetCounter();
+        InvalidateRect(window_, nullptr, FALSE);
+        return;
     case Action::ToggleTray:
         settings_.minimizeToTray = !settings_.minimizeToTray;
         changed = true;
@@ -926,10 +1000,13 @@ void MainWindow::updateSlider(const Action action, const int mouseX) {
         settings_.offsetY = interpolate(-100, 100);
         break;
     case Action::CpsSlider:
-        settings_.clicksPerSecond = interpolate(1, 30);
+        settings_.clicksPerSecond = interpolate(1, 50);
         break;
     case Action::VariationSlider:
-        settings_.intervalVariationPercent = interpolate(0, 35);
+        settings_.intervalVariationPercent = interpolate(0, 40);
+        break;
+    case Action::PressDurationSlider:
+        settings_.pressDurationMs = interpolate(4, 45);
         break;
     default:
         return;

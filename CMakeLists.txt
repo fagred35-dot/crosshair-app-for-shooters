@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(AimPoint VERSION 1.0.0 LANGUAGES CXX)
+project(AimPoint VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,4 +67,8 @@ if(BUILD_TESTING)
     add_executable(preset_catalog_test tests/preset_catalog_test.cpp)
     target_link_libraries(preset_catalog_test PRIVATE aimpoint_model)
     add_test(NAME preset_catalog_test COMMAND preset_catalog_test)
+
+    add_executable(click_timing_test tests/click_timing_test.cpp)
+    target_include_directories(click_timing_test PRIVATE src)
+    add_test(NAME click_timing_test COMMAND click_timing_test)
 endif()

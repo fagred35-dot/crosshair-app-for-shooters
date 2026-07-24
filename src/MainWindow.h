@@ -32,7 +32,7 @@ public:
 
 private:
     enum class Page { Gallery, Crosshair, Clicker, Settings };
-    enum class Filter { All, Static, Animated, Minimal, Tactical, Dynamic };
+    enum class Filter { All, Artistic, Static, Animated, Minimal, Tactical };
     enum class Action {
         None,
         Navigate,
@@ -52,10 +52,15 @@ private:
         ToggleClicker,
         CpsSlider,
         VariationSlider,
+        PressDurationSlider,
         SetClickMode,
         SetClickButton,
         SetBurst,
         SetHotkey,
+        SetStartDelay,
+        SetClickLimit,
+        ToggleFocusGuard,
+        ResetClickCounter,
         ToggleTray,
         ToggleStartup,
         ExitApplication

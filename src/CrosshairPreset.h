@@ -6,6 +6,8 @@
 
 namespace aimpoint {
 
+constexpr int kPresetCount = 900;
+
 enum class CrosshairShape {
     Classic,
     Dot,
@@ -18,7 +20,25 @@ enum class CrosshairShape {
     Sniper,
     Wings,
     Triad,
-    Hexagon
+    Hexagon,
+    Butterfly,
+    Saturn,
+    Bee,
+    Crown,
+    Heart,
+    Star,
+    Lightning,
+    Rocket,
+    Alien,
+    Cat,
+    Spider,
+    Flower,
+    Dragonfly,
+    Ghost,
+    Skull,
+    Sword,
+    Moon,
+    Flame
 };
 
 enum class Animation {
