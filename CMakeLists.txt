@@ -30,7 +30,7 @@ if(WIN32)
         resources/AimPoint.rc
     )
 
-    target_include_directories(AimPoint PRIVATE src)
+    target_include_directories(AimPoint PRIVATE src resources)
     target_compile_definitions(AimPoint PRIVATE
         UNICODE
         _UNICODE

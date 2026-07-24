@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "CrosshairRenderer.h"
+#include "Resource.h"
 
 #include <windowsx.h>
 
@@ -115,7 +116,7 @@ bool MainWindow::create(const bool startMinimized) {
     windowClass.lpfnWndProc = MainWindow::windowProc;
     windowClass.hInstance = instance_;
     windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    windowClass.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    windowClass.hIcon = LoadIconW(instance_, MAKEINTRESOURCEW(IDI_AIMPOINT));
     windowClass.hbrBackground = CreateSolidBrush(kBackground);
     windowClass.lpszClassName = kMainClassName;
     RegisterClassExW(&windowClass);
@@ -975,7 +976,7 @@ void MainWindow::addTrayIcon() {
     icon.uID = 1;
     icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     icon.uCallbackMessage = kTrayMessage;
-    icon.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    icon.hIcon = LoadIconW(instance_, MAKEINTRESOURCEW(IDI_AIMPOINT));
     lstrcpynW(icon.szTip, L"AimPoint — прицелы и автокликер",
               static_cast<int>(sizeof(icon.szTip) / sizeof(icon.szTip[0])));
     trayAdded_ = Shell_NotifyIconW(NIM_ADD, &icon) != FALSE;

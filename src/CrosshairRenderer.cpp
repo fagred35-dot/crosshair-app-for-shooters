@@ -203,13 +203,25 @@ void CrosshairRenderer::draw(HDC dc,
 
     const bool dot = preset.shape == CrosshairShape::Dot || preset.centerDot || options.centerDot;
     if (dot) {
-        float dotRadius = preset.shape == CrosshairShape::Dot
-                              ? std::max(2.0F, preset.thickness * 1.35F * scale)
-                              : std::max(1.3F, preset.thickness * 0.75F * scale);
+        const float dotRadius = preset.shape == CrosshairShape::Dot
+                                    ? std::max(2.0F, preset.thickness * 1.35F * scale)
+                                    : std::max(1.3F, preset.thickness * 0.75F * scale);
         if (outline) {
             drawDot(dc, center, dotRadius + 1.5F, RGB(8, 10, 14));
         }
         drawDot(dc, center, dotRadius, toColorRef(preset.accent));
+    }
+
+    // The orbiting accent keeps rotation visible even for symmetrical shapes such as dots and rings.
+    if (preset.animation == Animation::Rotate) {
+        const float orbit = std::max(8.0F, size + std::max(3.0F, gap * 0.45F));
+        const POINT tracer{center.x + static_cast<LONG>(std::lround(std::cos(angle) * orbit)),
+                           center.y + static_cast<LONG>(std::lround(std::sin(angle) * orbit))};
+        const float tracerRadius = std::max(1.2F, static_cast<float>(width) * 0.65F);
+        if (outline) {
+            drawDot(dc, tracer, tracerRadius + 1.2F, RGB(8, 10, 14));
+        }
+        drawDot(dc, tracer, tracerRadius, toColorRef(preset.accent));
     }
 }
 
